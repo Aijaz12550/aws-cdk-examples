@@ -5,37 +5,39 @@ export class CdkStack extends cdk.Stack {
   constructor(scope: cdk.Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
-    // LAMBDA FUNCTIONS *********
+    // lambda layers **********
 
+    const node_modules_layer = new lambda.LayerVersion(this, "dependencies",{
+      code: lambda.Code.fromAsset("src/lambda-layers/packages"),
+      compatibleRuntimes: [lambda.Runtime.NODEJS_12_X]
+    })
+
+
+    const authLayer = new lambda.LayerVersion(this,"authLayer",{
+      code: lambda.Code.fromAsset("src/lambda-layers/auth"),
+      compatibleRuntimes: [lambda.Runtime.NODEJS_12_X]
+    })
+
+    // LAMBDA FUNCTIONS *********
     const helloLambda = new lambda.Function(this, "helloLambda", {
       code: lambda.Code.fromAsset("src/lambda-functions/hello-world"),
       handler: "index.helloWorld",
       runtime: lambda.Runtime.NODEJS_12_X,
-      functionName:"helloWorld"
+      functionName:"helloWorld",
+      layers:[node_modules_layer,authLayer]
     });
 
-    const helloLambda1 = new lambda.Function(this, "helloLambda1", {
-      code: lambda.Code.fromAsset("src/lambda-functions/hello-world"),
-      handler: "index.helloWorld",
-      runtime: lambda.Runtime.NODEJS_12_X,
-      functionName:"helloWorld1"
-    });
 
-    // API GATEWAY **********
-    let api = new apigw.RestApi(this, "hello api",{
-      restApiName:"example api"
+    // api gateway
+
+    new apigw.LambdaRestApi(this,"layerapi",{
+      handler:helloLambda
     })
-
-    // baseUrl/test to invoke helloLambda
-    let item = api.root.addResource("test");
-    let helloLambdaTrigger = new apigw.LambdaIntegration(helloLambda);
-    item.addMethod("Get",helloLambdaTrigger)
-
-    // baseUrl/test to invoke helloLambda1
-    let item2 = api.root.addResource("test2");
-    let api1 = new apigw.LambdaIntegration(helloLambda1)
-    item2.addMethod("GET",api1)
     
 
+
+
+
+    
   }
 }
